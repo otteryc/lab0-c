@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "list.h"
 
 #include "queue.h"
 
@@ -11,49 +12,126 @@
  */
 
 
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
 /* Create an empty queue */
 struct list_head *q_new()
 {
-    return NULL;
+    struct list_head *head = malloc(sizeof(struct list_head));
+    if (!head)
+        return NULL;  // Malloc failure
+    INIT_LIST_HEAD(head);
+    return head;
 }
 
 /* Free all storage used by queue */
-void q_free(struct list_head *l) {}
+void q_free(struct list_head *l)
+{
+    if (!l)
+        return;
+    struct list_head *i = l;
+    element_t *entry, *safe;
+    list_for_each_entry_safe (entry, safe, i, list) {
+        q_release_element(entry);
+    }
+    free(l);
+}
+
+static inline element_t *e_new(const char *s)
+{
+    element_t *n = malloc(sizeof(element_t));
+    char *tmp = strdup(s);
+
+    if (!n || !tmp) {
+        free(n);
+        free(tmp);
+        return NULL;
+    }
+
+    n->value = tmp;
+    return n;
+}
 
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
+    if (unlikely(!head))
+        return false;
+    element_t *n = e_new(s);
+    if (unlikely(!n))
+        return false;
+    list_add(&n->list, head);
     return true;
 }
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    return true;
+    if (unlikely(!head))
+        return false;
+
+    return q_insert_head(head->prev, s);
 }
 
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
-    return NULL;
+    if (!head || list_empty(head))
+        return NULL;
+    element_t *victim = list_first_entry(head, element_t, list);
+    list_del(&victim->list);
+    if (likely(sp)) {
+        strncpy(sp, victim->value, bufsize);
+        sp[bufsize - 1] = 0;
+    }
+    return victim;
 }
 
 /* Remove an element from tail of queue */
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
-    return NULL;
+    if (!head || list_empty(head))
+        return NULL;
+    element_t *victim = list_last_entry(head, element_t, list);
+    list_del(&victim->list);
+    if (likely(sp)) {
+        strncpy(sp, victim->value, bufsize);
+        victim->value[bufsize - 1] = 0;
+    }
+    return victim;
 }
 
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
-    return -1;
+    if (!head)
+        return 0;
+
+    int len = 0;
+    struct list_head *li;
+    list_for_each (li, head)
+        len++;
+    return len;
 }
 
 /* Delete the middle node in queue */
 bool q_delete_mid(struct list_head *head)
 {
     // https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/
+    if (!head || list_empty(head))
+        return false;
+    struct list_head *first = head->next, *tail = head->prev;
+    while (true) {
+        if (first == tail)
+            break;
+        first = first->next;
+        if (first == tail)
+            break;
+        tail = tail->prev;
+    }
+    list_del(first);
+    q_release_element(list_entry(first, element_t, list));
     return true;
 }
 
@@ -67,11 +145,38 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
+    if (!head)
+        return;
+    struct list_head *left = head->next, *right = left->next;
+    while (right != head && left != head) {
+        /* Neighbors */
+        right->next->prev = left;
+        left->prev->next = right;
+        /* The Neighbors between nodes are remained */
+        right->prev = left->prev;
+        left->next = right->next;
+        /* Swap the nodes */
+        right->next = left;
+        left->prev = right;
+
+        left = left->next;
+        right = left->next;
+    }
     // https://leetcode.com/problems/swap-nodes-in-pairs/
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head)
+        return;
+    struct list_head *fast = head->next, *slow = head, *tmp;
+    do {
+        tmp = slow->next;
+        slow->next = slow->prev;
+        slow->prev = tmp;
+    } while (slow = fast, fast = fast->next, slow != head);
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
@@ -102,6 +207,5 @@ int q_descend(struct list_head *head)
  * order */
 int q_merge(struct list_head *head, bool descend)
 {
-    // https://leetcode.com/problems/merge-k-sorted-lists/
     return 0;
 }
