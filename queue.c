@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -139,6 +140,23 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head || list_empty(head))
+        return false;
+    bool mark_delete = false;
+    element_t *iter, *safe;
+    list_for_each_entry_safe (iter, safe, head, list) {
+        if (!strcmp(iter->value, safe->value)) {
+            mark_delete = true;
+            list_del(&iter->list);
+            q_release_element(iter);
+        } else if (mark_delete) {
+            mark_delete = false;
+            list_del(&iter->list);
+            q_release_element(iter);
+        }
+        if (safe->list.next == head)
+            break;
+    }
     return true;
 }
 
@@ -184,8 +202,55 @@ void q_reverseK(struct list_head *head, int k)
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
 }
 
+static void merge_sort_conquer(struct list_head *dest,
+                               struct list_head *victim,
+                               bool descend)
+{
+    long mask = descend ? 0 : INT_MIN;
+    LIST_HEAD(result);
+    struct list_head *insert;
+    while (!list_empty(dest) && !list_empty(victim)) {
+        element_t *e_victim = list_first_entry(victim, element_t, list),
+                  *e_dest = list_first_entry(dest, element_t, list);
+        insert = strcmp(e_victim->value, e_dest->value) & mask ? victim->next
+                                                               : dest->next;
+        list_move_tail(insert, &result);
+    }
+
+    insert = list_empty(dest) ? victim : dest;
+    list_splice_tail(insert, &result);
+
+    INIT_LIST_HEAD(insert);
+
+    list_splice(&result, dest);
+    return;
+}
+
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_is_singular(head) || list_empty(head))
+        return;
+
+    struct list_head *right = head->next, *left = head->prev;
+    while (true) {
+        if (right == left)
+            break;
+        left = left->prev;
+        if (right == left)
+            break;
+        right = right->next;
+    }
+
+    LIST_HEAD(mid);
+    list_cut_position(&mid, head, right);
+
+    q_sort(head, descend);
+    q_sort(&mid, descend);
+
+    merge_sort_conquer(head, &mid, descend);
+}
+
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
