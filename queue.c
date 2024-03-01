@@ -145,7 +145,7 @@ bool q_delete_dup(struct list_head *head)
     bool mark_delete = false;
     element_t *iter, *safe;
     list_for_each_entry_safe (iter, safe, head, list) {
-        if (!strcmp(iter->value, safe->value)) {
+        if (&safe->list != head && !strcmp(iter->value, safe->value)) {
             mark_delete = true;
             list_del(&iter->list);
             q_release_element(iter);
@@ -154,8 +154,6 @@ bool q_delete_dup(struct list_head *head)
             list_del(&iter->list);
             q_release_element(iter);
         }
-        if (safe->list.next == head)
-            break;
     }
     return true;
 }
