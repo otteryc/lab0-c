@@ -259,25 +259,27 @@ int q_ascend(struct list_head *head)
         return 0;
 
     element_t *iter, *safe;
-    bool del = false;
-    list_for_each_entry_safe (iter, safe, head, list) {
-        if (del) {
-            del = false;
-            list_del(&iter->list);
-            q_release_element(iter);
+    bool del = false, done = true;
+    do {
+        done = true;
+        list_for_each_entry_safe (iter, safe, head, list) {
+            if (del) {
+                del = false;
+                done = false;
+                list_del(&iter->list);
+                q_release_element(iter);
+                continue;
+            }
+            if (&safe->list != head && strcmp(iter->value, safe->value) >= 0)
+                del = true;
         }
-        if (&safe->list == head)
-            break;
-        /* it is NOT ALLOWED to delete `safe` */
-        if (strcmp(iter->value, safe->value) >= 0)
-            del = true;
-    }
+    } while (!done);
 
     return q_size(head);
 }
 
-/* Remove every node which has a node with a strictly greater value anywhere to
- * the right side of it */
+/* Remove every node which has a node with a strictly greater value anywhere
+ * to the right side of it */
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
@@ -285,24 +287,27 @@ int q_descend(struct list_head *head)
         return 0;
 
     element_t *iter, *safe;
-    bool del = false;
-    list_for_each_entry_safe (iter, safe, head, list) {
-        if (del) {
-            del = false;
-            list_del(&iter->list);
-            q_release_element(iter);
+    bool del = false, done = true;
+    do {
+        done = true;
+        list_for_each_entry_safe (iter, safe, head, list) {
+            if (del) {
+                del = false;
+                done = false;
+                list_del(&iter->list);
+                q_release_element(iter);
+                continue;
+            }
+            if (&safe->list != head && strcmp(iter->value, safe->value) <= 0)
+                del = true;
         }
-        if (&safe->list == head)
-            break;
-        if (strcmp(iter->value, safe->value) <= 0)
-            del = true;
-    }
+    } while (!done);
 
     return q_size(head);
 }
 
-/* Merge all the queues into one sorted queue, which is in ascending/descending
- * order */
+/* Merge all the queues into one sorted queue, which is in
+ * ascending/descending order */
 int q_merge(struct list_head *head, bool descend)
 {
     return 0;
