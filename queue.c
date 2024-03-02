@@ -310,5 +310,16 @@ int q_descend(struct list_head *head)
  * ascending/descending order */
 int q_merge(struct list_head *head, bool descend)
 {
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    LIST_HEAD(result);
+    queue_contex_t *iter;
+    list_for_each_entry (iter, head, chain) {
+        // cppcheck-suppress uninitvar
+        merge_sort_conquer(&result, iter->q, descend);
+        INIT_LIST_HEAD(iter->q);
+    }
+
+    list_splice(&result, list_first_entry(head, queue_contex_t, chain)->q);
+    return q_size(list_first_entry(head, queue_contex_t, chain)->q);
 }
