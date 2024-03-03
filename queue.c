@@ -198,6 +198,27 @@ void q_reverse(struct list_head *head)
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (k < 2 || !head || list_empty(head))
+        return;
+
+    LIST_HEAD(result);
+
+
+    while (!list_empty(head)) {
+        LIST_HEAD(tmp);
+        struct list_head *iter = head;
+        size_t i = 0;
+        while (i++, iter = iter->next, i < k && iter != head)
+            ;
+
+        list_cut_position(&tmp, head, (iter == head) ? iter->prev : iter);
+        if (iter != head)
+            q_reverse(&tmp);
+
+        list_splice_tail(&tmp, &result);
+    }
+
+    list_splice(&result, head);
 }
 
 static void merge_sort_conquer(struct list_head *dest,
@@ -283,27 +304,31 @@ int q_ascend(struct list_head *head)
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    if (!head || list_empty(head))
-        return 0;
-
-    element_t *iter, *safe;
-    bool del = false, done = true;
-    do {
-        done = true;
-        list_for_each_entry_safe (iter, safe, head, list) {
-            if (del) {
-                del = false;
-                done = false;
-                list_del(&iter->list);
-                q_release_element(iter);
-                continue;
-            }
-            if (&safe->list != head && strcmp(iter->value, safe->value) <= 0)
-                del = true;
-        }
-    } while (!done);
-
+    q_reverse(head);
+    q_ascend(head);
+    q_reverse(head);
     return q_size(head);
+    // if (!head || list_empty(head))
+    //     return 0;
+    //
+    // element_t *iter, *safe;
+    // bool del = false, done = true;
+    // do {
+    //     done = true;
+    //     list_for_each_entry_safe (iter, safe, head, list) {
+    //         if (del) {
+    //             del = false;
+    //             done = false;
+    //             list_del(&iter->list);
+    //             q_release_element(iter);
+    //             continue;
+    //         }
+    //         if (&safe->list != head && strcmp(iter->value, safe->value) <= 0)
+    //             del = true;
+    //     }
+    // } while (!done);
+    //
+    // return q_size(head);
 }
 
 /* Merge all the queues into one sorted queue, which is in
