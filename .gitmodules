@@ -1,0 +1,3 @@
+[submodule "ttt"]
+	path = ttt
+	url = git@github.com:otteryc/ttt
